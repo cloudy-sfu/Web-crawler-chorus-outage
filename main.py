@@ -123,7 +123,7 @@ for incident in incidents:
         }
         outages.append(site_)
 outages = pd.DataFrame(outages)
-record_date = pd.Timestamp.now(tz='Pacific/Auckland')
+record_date = pd.Timestamp.now(tz='UTC')
 if cmd.github_action:
     outages.to_pickle(f"/tmp/{record_date.strftime("%Y-%m-%d")}")
 else:
