@@ -1,12 +1,12 @@
 import re
 import json
 import logging
+import os
 import sys
 
 import pandas as pd
 from requests import Session
 from shapely.geometry import shape
-from argparse import ArgumentParser
 
 logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
@@ -15,9 +15,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 session = Session()
-parser = ArgumentParser()
-parser.add_argument('--github_action', action='store_true')
-cmd, _ = parser.parse_known_args()
 
 # %% Load header.
 with open("header/chorus_config.json") as f:
@@ -124,7 +121,7 @@ for incident in incidents:
         outages.append(site_)
 outages = pd.DataFrame(outages)
 record_date = pd.Timestamp.now(tz='UTC')
-if cmd.github_action:
-    outages.to_pickle(f"/tmp/{record_date.strftime("%Y-%m-%d")}")
-else:
-    outages.to_pickle(f"{record_date.strftime("%Y-%m-%d")}")
+
+output_path = f"results/{record_date.strftime("%Y-%m")}/{record_date.strftime("%Y-%m-%d")}"
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
+outages.to_pickle(output_path)
