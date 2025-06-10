@@ -1,12 +1,11 @@
-import re
 import json
 import logging
 import os
+import re
 import sys
 
 import pandas as pd
 from requests import Session
-from shapely.geometry import shape
 
 logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
@@ -91,21 +90,13 @@ for incident in incidents:
     description = incident.get('description', '')
     for site in sites:
         try:
+            # can be parsed by shapely.geometry.shape
             point = json.loads(site.get('point', ''))
-            try:
-                point = shape(point)
-            except Exception as e:
-                logging.error(f"Point of a site cannot be parsed. {e}")
-                point = pd.NA
         except json.JSONDecodeError:
             point = pd.NA
         try:
+            # can be parsed by shapely.geometry.shape
             multi_polygon = json.loads(site.get('poly', ''))
-            try:
-                multi_polygon = shape(multi_polygon)
-            except Exception as e:
-                logging.error(f"Multi-polygon of a site cannot be parsed. {e}")
-                multi_polygon = pd.NA
         except json.JSONDecodeError:
             multi_polygon = pd.NA
         site_ = {
@@ -122,6 +113,7 @@ for incident in incidents:
 outages = pd.DataFrame(outages)
 record_date = pd.Timestamp.now(tz='UTC')
 
-output_path = f"results/{record_date.strftime("%Y-%m")}/{record_date.strftime("%Y-%m-%d")}"
+output_path = (f"results/{record_date.strftime("%Y-%m")}/"
+               f"{record_date.strftime("%Y-%m-%d")}.parquet")
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
-outages.to_pickle(output_path)
+outages.to_parquet(output_path, engine='pyarrow')
