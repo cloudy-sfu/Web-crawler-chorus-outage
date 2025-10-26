@@ -6,6 +6,7 @@ import sys
 
 import pandas as pd
 from requests import Session
+from sqlalchemy import create_engine, text
 
 logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
@@ -111,10 +112,14 @@ for incident in incidents:
         }
         outages.append(site_)
 outages = pd.DataFrame(outages)
-if outages.shape[0] > 0:
-    record_date = pd.Timestamp.now(tz='UTC')
-    
-    output_path = (f"results/{record_date.strftime("%Y-%m")}/"
-                   f"{record_date.strftime("%Y-%m-%d")}.parquet")
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    outages.to_parquet(output_path, engine='pyarrow')
+
+# %% Export.
+outages['incident_point'] = outages['incident_point'].to_json()
+outages['incident_area'] = outages['incident_area'].to_json()
+engine = create_engine(os.environ['NEON_DB'])
+with engine.begin() as c:
+    delete_query = text("DELETE FROM public.chorus "
+                        "WHERE recorded_time >= NOW() - INTERVAL '12 hours'")
+    c.execute(delete_query)
+    outages.to_sql(name="chorus", con=c, schema="public", if_exists="append",
+                   index=False)
